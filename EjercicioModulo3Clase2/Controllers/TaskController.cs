@@ -1,13 +1,12 @@
-﻿using EjercicioModulo3Clase2.Domain.DTOs;
-using EjercicioModulo3Clase2.Domain.Entities;
-using EjercicioModulo3Clase2.Repository;
-using Microsoft.AspNetCore.Http;
+﻿using EjercicioModulo3Clase2.Domain.Entities;
+using EjercicioModulo3Clase2.Domain.DTOs;
+using EjercicioModulo3Clase2.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient.Server;
 using System.Globalization;
 
 namespace EjercicioModulo3Clase2.Controllers
 {
+    //[Route("api/[controller]")]
     [Route("V1")]
     [ApiController]
     public class TaskController : ControllerBase
@@ -23,27 +22,31 @@ namespace EjercicioModulo3Clase2.Controllers
         #endregion
 
         // Inyección Dependencias
-        private readonly DBContext _context;
+        private ITasksService _tasksService;
+        //private IConfiguration _configuration;
 
-        public TaskController(DBContext context)
+        public TaskController(ITasksService tasksService, IConfiguration configuration)
         {
-            _context = context;
+            _tasksService = tasksService;
+        //    _configuration = configuration;
         }
 
+        //int paginaMin = int.Parse(builder.Configuration.GetSection("PagMin").Value);
 
         #region Ejercicio 1
         // Crear un endpoint para obtener un listado de todas las tareas usando HTTP GET
         [HttpGet("GetTasks")]
         public IActionResult GetTasks()
         {
-            return Ok(_context.Tasks.ToList());
+            var tareas = _tasksService.GetTasks();
+            return Ok(tareas);
         }
         #endregion
 
         #region Ejercicio 2
-        // Crear un endpoint para obtener una tarea por ID usando HTTP GET
+        //Crear un endpoint para obtener una tarea por ID usando HTTP GET
         [HttpGet("GetTask/{id}", Name = "GetTaskById")]
-        public IActionResult GetTaskById([FromRoute] int id = 1)
+        public IActionResult GetTaskById([FromRoute] int id)
         {
             if (id <= 0)
             {
@@ -51,7 +54,7 @@ namespace EjercicioModulo3Clase2.Controllers
             }
             else
             {
-                var tarea = _context.Tasks.FirstOrDefault(f => f.Id == id);
+                var tarea = _tasksService.GetTaskById(id); 
                 if (tarea == null)
                 {
                     return Ok($"id={id} - Tarea no encontrada");
@@ -91,9 +94,7 @@ namespace EjercicioModulo3Clase2.Controllers
                         IsActive = tarea.IsActive,
                         IsCompleted = tarea.IsCompleted
                     };
-                    _context.Add(t);
-                    _context.SaveChanges();
-                    return CreatedAtRoute("GetTaskById", new { id = t.Id }, t);
+                    return Ok(_tasksService.AddTask(t));
                 }
             }
             else
@@ -115,7 +116,7 @@ namespace EjercicioModulo3Clase2.Controllers
             }
             else
             {
-                var tarea = _context.Tasks.FirstOrDefault(f => f.Id == id);
+                var tarea = _tasksService.GetTaskById(id);
                 if (tarea == null)
                 {
                     return Ok($"id={id} - Tarea no encontrada");
@@ -128,9 +129,7 @@ namespace EjercicioModulo3Clase2.Controllers
                     }
                     else
                     {
-                        tarea.IsCompleted = true;
-                        _context.SaveChanges();
-                        return Ok(tarea);
+                        return Ok(_tasksService.CompleteTaskById(id));
                     }
                 }
             }
@@ -149,7 +148,7 @@ namespace EjercicioModulo3Clase2.Controllers
             }
             else
             {
-                var tarea = _context.Tasks.FirstOrDefault(f => f.Id == id);
+                var tarea = _tasksService.GetTaskById(id);
                 if (tarea == null)
                 {
                     return Ok($"id={id} - Tarea no encontrada");
@@ -158,9 +157,7 @@ namespace EjercicioModulo3Clase2.Controllers
                 {
                     if (tarea.IsActive == true)
                     {
-                        tarea.IsActive = false;
-                        _context.SaveChanges();
-                        return Ok(tarea);
+                        return Ok(_tasksService.DesactiveTaskById(id));
                     }
                     else
                     {
@@ -177,7 +174,7 @@ namespace EjercicioModulo3Clase2.Controllers
         [HttpGet("GetActiveTasks")]
         public IActionResult GetActiveTasks()
         {
-            var tareasActivas = _context.Tasks.Where(w => w.IsActive == true).ToList();
+            var tareasActivas = _tasksService.GetActiveTasks();
             if (tareasActivas.Count == 0)
             {
                 return Ok("No existen tareas activas");
@@ -192,7 +189,7 @@ namespace EjercicioModulo3Clase2.Controllers
         [HttpGet("GetCompletedTasks")]
         public IActionResult GetCompletedTasks()
         {
-            var tareasCompletas = _context.Tasks.Where(w => w.IsCompleted == true).ToList();
+            var tareasCompletas = _tasksService.GetCompletedTasks();
             if (tareasCompletas.Count == 0)
             {
                 return Ok("No existen tareas completas");
@@ -207,7 +204,7 @@ namespace EjercicioModulo3Clase2.Controllers
         [HttpGet("GetTasksByStatus")]
         public IActionResult GetTasksByStatus([FromQuery] bool isCompleted, [FromQuery] bool isActive)
         {
-            var tareas = _context.Tasks.Where(w => w.IsCompleted == isCompleted && w.IsActive == isActive).ToList();
+            var tareas = _tasksService.GetTasksByStatus(isCompleted, isActive);
             if (tareas.Count == 0)
             {
                 return Ok("No existen tareas en los estados solicitados.");

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using EjercicioModulo3Clase2.Domain.Entities;
 using EjercicioModulo3Clase2.Repository;
+using EjercicioModulo3Clase2.Services;
+using EjercicioModulo3Clase2.Services.Interfaces;
 using System.Threading;
 
 namespace EjercicioModulo3Clase2
@@ -20,11 +22,13 @@ namespace EjercicioModulo3Clase2
             builder.Services.AddSwaggerGen();
 
             // Inyección Dependencias
-            builder.Services.AddDbContext<DBContext>(opt =>
-            {
-                opt.UseSqlServer("Data Source=DESKTOP-EJRGUFU\\SQLEXPRESS;Initial Catalog=ToDoListDB;Integrated Security=True;Trust Server Certificate=True"); 
-            });
+            var connection = builder.Configuration.GetConnectionString("DefaultConnection");
 
+            builder.Services.AddDbContext<DBContext>(opt => 
+                    opt.UseSqlServer(connection));
+
+            //Contenedor de dependencias
+            builder.Services.AddScoped<ITasksService, TasksService>();
 
             var app = builder.Build();
 
